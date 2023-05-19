@@ -1,32 +1,36 @@
-import { useEffect, useRef, useState } from "react";
-import { Typography } from "@mui/material";
+import { useEffect, useState, useRef } from 'react';
+import io from 'socket.io-client';
 
-import io from "socket.io-client";
+import BaseLayout from './components/BaseLayout';
 
 const ENDPOINT = `http://${window.location.hostname}:3003`;
 
 const App = () => {
+  const [data, setData] = useState([]);
+  const [user, setUser] = useState(null);
   const socketIo = useRef(null);
-  const [client, setClient] = useState(null);
 
   useEffect(() => {
+    // Data fetching calls
     socketIo.current = io(ENDPOINT);
+    socketIo.current.connect();
 
-    socketIo.current.on(
-      "client-connected",
-      (client) => client && setClient(client)
+    socketIo.current.on('market-data', (response) => {
+      console.log({ response });
+      setData((current) => [...current, response]);
+    });
+
+    socketIo.current.on('client-connected', (response) =>
+      setUser(response),
     );
 
-    socketIo.current.on("market-data", (data) => console.log({ data }));
-
-    return () => socketIo.current.disconnect();
+    return () => {
+      socketIo.current.disconnect();
+    };
   }, []);
 
-  if (!client) {
-    return <Typography>There's no one client connected at moment</Typography>;
-  }
-
-  return <Typography>Client Connected: {client?.first_name}</Typography>;
+  // Pass down data to child component
+  return <BaseLayout user={user} data={data} />;
 };
 
 export default App;
